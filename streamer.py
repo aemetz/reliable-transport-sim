@@ -2,6 +2,7 @@
 from lossy_socket import LossyUDP
 # do not import anything else from socket except INADDR_ANY
 from socket import INADDR_ANY
+import sys
 
 
 
@@ -17,10 +18,17 @@ class Streamer:
 
     def send(self, data_bytes: bytes) -> None:
         """Note that data_bytes can be larger than one packet."""
-        # Your code goes here!  The code below should be changed!
+        len = sys.getsizeof(data_bytes)
 
+        if len > 1472:
+            for i in range(0, len, 1472):
+                if i+1472 > len:
+                    self.socket.sendto(data_bytes[i:len-1], (self.dst_ip, self.dst_port))
+                else:
+                    self.socket.sendto(data_bytes[i:i+1472], (self.dst_ip, self.dst_port))
+        else:
         # for now I'm just sending the raw application-level data in one UDP payload
-        self.socket.sendto(data_bytes, (self.dst_ip, self.dst_port))
+            self.socket.sendto(data_bytes, (self.dst_ip, self.dst_port))
 
     def recv(self) -> bytes:
         """Blocks (waits) if no data is ready to be read from the connection."""
