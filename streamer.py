@@ -19,6 +19,19 @@ class Streamer:
         self.seq = 0
         self.rec_seq = 0
         self.buffer = {}
+        self.mtu = 1470
+
+        #
+
+
+    # def listener(self):
+    #     while not self.closed:
+    #         try:
+    #             data, addr = self.socket.recvfrom()
+    #             # store data in receive buffer ...
+    #         except Exception as e:
+    #             print("listener died!")
+    #             print(e)
 
     def send(self, data_bytes: bytes) -> None:
         """Note that data_bytes can be larger than one packet."""
@@ -28,13 +41,13 @@ class Streamer:
         
         
         # j = 0
-        if len > 1472:
-            for i in range(0, len, 1472):
-                if i+1472 > len:
+        if len > self.mtu:
+            for i in range(0, len, self.mtu):
+                if i+self.mtu > len:
                     data = pack('@H1470s', self.seq, data_bytes[i:len-1])
                     self.socket.sendto(data, (self.dst_ip, self.dst_port))
                 else:
-                    data = pack('@H1470s', self.seq, data_bytes[i:i+1472])
+                    data = pack('@H1470s', self.seq, data_bytes[i:i+self.mtu])
                     print(type(data))
                     
                     self.socket.sendto(data, (self.dst_ip, self.dst_port))
@@ -42,7 +55,7 @@ class Streamer:
         else:
         # for now I'm just sending the raw application-level data in one UDP payload
             data = pack('@H1470s', self.seq, data_bytes)
-            print(type(data))
+            # print(type(data))
             self.socket.sendto(data, (self.dst_ip, self.dst_port))
             self.seq += 1
 
@@ -67,9 +80,9 @@ class Streamer:
         # if we receive an unpacked_seq_num out of order (!= rec_seq)
         # we store it in buffer as key w value data
         # when 
-        print(unpacked_data)
-        print(type(unpacked_seq_num))
-        print(type(self.rec_seq))
+        # print(unpacked_data)
+        # print(type(unpacked_seq_num))
+        # print(type(self.rec_seq))
         if self.rec_seq == unpacked_seq_num:
             total_data = unpacked_data
 
@@ -86,8 +99,8 @@ class Streamer:
         
         # print(f"TYPE: {type(data)}")
         # print(f"DATA: {data}")
-        # print(f"Unpacked DATA: {unpacked}")
-        # print("Unpacked split: ", unpacked[1].split(b'\x00')[0])
+        print(f"Unpacked DATA: {unpacked_data}")
+        
         # For now, I'll just pass the full UDP payload to the app
         return b''
 
@@ -95,4 +108,6 @@ class Streamer:
         """Cleans up. It should block (wait) until the Streamer is done with all
            the necessary ACKs and retransmissions"""
         # your code goes here, especially after you add ACKs and retransmissions.
+        # self.closed = True
+        # self.socket . stoprecv ()
         pass
