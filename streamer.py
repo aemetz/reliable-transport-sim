@@ -5,6 +5,8 @@ from socket import INADDR_ANY
 import sys
 from struct import unpack, pack
 
+from concurrent.futures import ThreadPoolExecutor
+
 
 
 class Streamer:
@@ -20,18 +22,35 @@ class Streamer:
         self.rec_seq = 0
         self.buffer = {}
         self.mtu = 1470
+        self.closed = False
+        executor = ThreadPoolExecutor(max_workers = 1)
+        executor.submit(self.listener)
 
         #
 
 
-    # def listener(self):
-    #     while not self.closed:
-    #         try:
-    #             data, addr = self.socket.recvfrom()
-    #             # store data in receive buffer ...
-    #         except Exception as e:
-    #             print("listener died!")
-    #             print(e)
+    def listener(self):
+        while not self.closed:
+            try:
+                data, addr = self.socket.recvfrom()
+                
+                # continue listening if an empty data packet is received
+                # prevents unpack exception: 'requires a buffer of 1472 bytes'
+                if data == b'':
+                    continue
+                
+                unpacked = unpack('@H1470s', data)
+                unpacked_seq_num = unpacked[0]
+                unpacked_data = unpacked[1].split(b'\x00')[0]
+
+                # stores data in buffer
+                self.buffer[unpacked_seq_num] = unpacked_data
+                # self.recv()
+                
+            except Exception as e:
+                print("listener died!")
+                print(e)
+
 
     def send(self, data_bytes: bytes) -> None:
         """Note that data_bytes can be larger than one packet."""
@@ -67,13 +86,13 @@ class Streamer:
         
 
 
-        data, addr = self.socket.recvfrom()
-        size = sys.getsizeof(data)
-        unpacked = unpack('@H1470s', data)
+        # data, addr = self.socket.recvfrom()
+        # size = sys.getsizeof(data)
+        # unpacked = unpack('@H1470s', data)
 
 
-        unpacked_seq_num = unpacked[0]
-        unpacked_data = unpacked[1].split(b'\x00')[0]
+        # unpacked_seq_num = unpacked[0]
+        # unpacked_data = unpacked[1].split(b'\x00')[0]
         # size = sys.getsizeof(unpacked_data)
         
 
@@ -83,23 +102,21 @@ class Streamer:
         # print(unpacked_data)
         # print(type(unpacked_seq_num))
         # print(type(self.rec_seq))
-        if self.rec_seq == unpacked_seq_num:
-            total_data = unpacked_data
+
+        if self.buffer.get(self.rec_seq):
+            total_data = self.buffer[self.rec_seq]
 
             while self.buffer.get(self.rec_seq + 1) != None:
-            #    print("WHILE WHILE WHIKLE ++ +@ ++# +#)+ +()$#")
                total_data += self.buffer[self.rec_seq + 1]
-               self.rec_seq += 1 
+               self.rec_seq += 1
             
             self.rec_seq += 1
             print(total_data)
             return total_data
-        else:
-            self.buffer[unpacked_seq_num] = unpacked_data
         
         # print(f"TYPE: {type(data)}")
         # print(f"DATA: {data}")
-        print(f"Unpacked DATA: {unpacked_data}")
+        # print(f"Unpacked DATA: {unpacked_data}")
         
         # For now, I'll just pass the full UDP payload to the app
         return b''
@@ -108,6 +125,6 @@ class Streamer:
         """Cleans up. It should block (wait) until the Streamer is done with all
            the necessary ACKs and retransmissions"""
         # your code goes here, especially after you add ACKs and retransmissions.
-        # self.closed = True
-        # self.socket . stoprecv ()
+        self.closed = True
+        self.socket.stoprecv()
         pass
