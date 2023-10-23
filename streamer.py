@@ -45,11 +45,18 @@ class Streamer:
 
                 unpacked_data = unpacked[2].split(b'\x00')[0]
 
+                # print(f"UNPACKED DATA: {unpacked_data}")
+                # print(f"IS ACK?: {is_ack}")
+                # if is_ack == b'1':
+                #     print(f"UNPACKED DATA SEQ NUM (if ack): {unpacked_seq_num}")
+
                 # stores data in buffer
                 if is_ack == b'0':
                     self.buffer[unpacked_seq_num] = unpacked_data
                 else:
+                    
                     self.ack = True
+                    
                 # self.recv()
                 
             except Exception as e:
@@ -67,19 +74,30 @@ class Streamer:
                 if i+self.mtu > len:
                     # 0 for data, 1 for ack
                     data = pack('@Hc1469s', self.seq, b'0', data_bytes[i:len-1])
-                    self.socket.sendto(data, (self.dst_ip, self.dst_port))
+                    
+                    # possible alternative: call to self.send(data_bytes) and have while loop at the end
+                    while not self.ack:
+                        print("Sending...")
+                        self.socket.sendto(data, (self.dst_ip, self.dst_port))
+                        time.sleep(0.25)
+
                 else:
                     data = pack('@Hc1469s', self.seq, b'0', data_bytes[i:i+self.mtu])
-                    print(type(data))
-                    
-                    self.socket.sendto(data, (self.dst_ip, self.dst_port))
+                    while not self.ack:
+                        print("Sending...")
+                        self.socket.sendto(data, (self.dst_ip, self.dst_port))
+                        time.sleep(0.25)
+
                 self.seq += 1
         else:
             data = pack('@Hc1469s', self.seq, b'0', data_bytes)
-            self.socket.sendto(data, (self.dst_ip, self.dst_port))
+            while not self.ack:
+                print("Sending...")
+                self.socket.sendto(data, (self.dst_ip, self.dst_port))
+                time.sleep(0.25)
             self.seq += 1
 
-        while not self.ack: time.sleep(0.01)
+        # while not self.ack: time.sleep(0.01)
 
         self.ack = False
 
@@ -87,14 +105,14 @@ class Streamer:
         """Blocks (waits) if no data is ready to be read from the connection."""
 
         total_data = b''
-
+        # print(f'REC_SEQ_NUM{self.rec_seq}')
         while self.buffer.get(self.rec_seq):
             total_data += self.buffer[self.rec_seq]
 
             ack = pack('@Hc1469s', self.rec_seq, b'1', b'')
             self.socket.sendto(ack, (self.dst_ip, self.dst_port))
-
             self.rec_seq += 1
+            
             
         return total_data
         
