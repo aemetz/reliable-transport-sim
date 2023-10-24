@@ -93,6 +93,7 @@ class Streamer:
                         time.sleep(0.25)
 
                 self.seq += 1
+                self.ack = False
         else:
             data = pack("@Hc1469s", self.seq, b"0", data_bytes)
             while not self.ack:
@@ -111,13 +112,13 @@ class Streamer:
 
         total_data = b""
         # print(f'REC_SEQ_NUM{self.rec_seq}')
-        print(self.rec_seq)
+        print(f"rec_seq line 114: {self.rec_seq}")
         while self.buffer.get(self.rec_seq):
             total_data += self.buffer[self.rec_seq]
 
             # ack = pack("@Hc1469s", self.rec_seq, b"1", b"")
             # self.socket.sendto(ack, (self.dst_ip, self.dst_port))
-            print(total_data)
+            print(f"total_data line 120: {total_data}")
             self.rec_seq += 1
 
         return total_data
