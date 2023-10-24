@@ -79,7 +79,7 @@ class Streamer:
 
                     # possible alternative: call to self.send(data_bytes) and have while loop at the end
                     while not self.ack:
-                        print("Sending...")
+                        # print("Sending...")  # COMMENTED OUT
                         self.socket.sendto(data, (self.dst_ip, self.dst_port))
                         time.sleep(0.25)
 
@@ -88,7 +88,7 @@ class Streamer:
                         "@Hc1469s", self.seq, b"0", data_bytes[i : i + self.mtu]
                     )
                     while not self.ack:
-                        print("Sending...")
+                        # print("Sending...")  # COMMENTED OUT
                         self.socket.sendto(data, (self.dst_ip, self.dst_port))
                         time.sleep(0.25)
 
@@ -97,7 +97,7 @@ class Streamer:
         else:
             data = pack("@Hc1469s", self.seq, b"0", data_bytes)
             while not self.ack:
-                print("Sending...")
+                # print("Sending...")  # COMMENTED OUT
                 self.socket.sendto(data, (self.dst_ip, self.dst_port))
                 time.sleep(0.25)
 
@@ -109,16 +109,16 @@ class Streamer:
 
     def recv(self) -> bytes:
         """Blocks (waits) if no data is ready to be read from the connection."""
-
+        # time.sleep(0.25)
         total_data = b""
-        # print(f'REC_SEQ_NUM{self.rec_seq}')
-        print(f"rec_seq line 114: {self.rec_seq}")
+        # print(f"REC_SEQ_NUM{self.rec_seq}")
+        # print(f"rec_seq line 114: {self.rec_seq}")  #  COMMENTED OUT
         while self.buffer.get(self.rec_seq):
             total_data += self.buffer[self.rec_seq]
 
             # ack = pack("@Hc1469s", self.rec_seq, b"1", b"")
             # self.socket.sendto(ack, (self.dst_ip, self.dst_port))
-            print(f"total_data line 120: {total_data}")
+            # print(f"total_data line 120: {total_data}")  # COMMENTED OUT
             self.rec_seq += 1
 
         return total_data
@@ -131,10 +131,11 @@ class Streamer:
         fin = pack("@Hc1469s", self.rec_seq, b"2", b"")
 
         while not self.ack:
-            print("Sending FIN packet...")
+            # print("Sending FIN packet...")  # COMMENTED OUT
             self.socket.sendto(fin, (self.dst_ip, self.dst_port))
             time.sleep(0.25)
 
+        time.sleep(2)
         self.closed = True
         self.socket.stoprecv()
         pass
